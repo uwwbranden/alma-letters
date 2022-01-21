@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xsl:stylesheet version="1.0"
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+
+<xsl:include href="header.xsl" />
+<xsl:include href="senderReceiver.xsl" />
+<xsl:include href="mailReason.xsl" />
+<xsl:include href="footer.xsl" />
+<xsl:include href="style.xsl" />
+<xsl:include href="recordTitle.xsl" />
+<xsl:template match="/">
+	<html>
+		<head>
+		<xsl:call-template name="generalStyle" />
+		</head>
+
+			<body style="margin: 1em">
+                        <tr><td><div align="left" style="font-size:25px; font-family:arial; font-style:bold;">
+									<xsl:choose>
+                                    	
+										<xsl:when test="notification_data/request/request_type = 'RESOURCE_SHARING_PHYSICAL_SHIPMENT'">
+                                Resource Sharing Request <br /> Pick from Shelf - do not use as shipping slip<br />
+                                <h3>Library Staff use Ship Items to Process</h3>
+										</xsl:when>
+                                        <xsl:when test="notification_data/request/request_type = 'PATRON_PHYISCAL_ITEM_REQUEST'">
+                    			        <xsl:value-of select="notification_data/destination"/>	<br /> Local Request<br />
+                                         <h3>Library Staff use Scan in to Process</h3><br />	
+										</xsl:when>	
+                                        <xsl:when test="notification_data/request/request_type = 'MOVE_TO_TEMPORARY'">
+                    			        <xsl:value-of select="notification_data/destination"/>	<br /> Move Request<br />
+                                         <h3>Library Staff use Scan in to Process</h3><br />	
+										</xsl:when>		
+										<xsl:when test="starts-with(notification_data/destination, 'UW Colleges')">
+                                <h3>UWC</h3>
+                                     <xsl:call-template name="GetLastSegment">
+                                            <xsl:with-param name="value" select="notification_data/destination" />
+                                            <xsl:with-param name="separator" select="'UW Colleges'" />
+                                     </xsl:call-template>
+                </xsl:when>
+                                
+                
+                <xsl:otherwise>
+						<xsl:if test="not(/notification_data/request/work_flow_entity/step_type = 'ON_HOLD_SHELF')">
+				            <h1><xsl:call-template name="libLookup"><xsl:with-param name="input" select="/notification_data/destination"/></xsl:call-template></h1>
+							
+							<div align="left"><h4><br/><br/><br/><br/><b>Library Staff:</b> Use Scan in to Process</h4></div><br /> 
+						</xsl:if>
+<!--xsl:value-of select="/notification_data/destination"/-->
+						<xsl:if test="(/notification_data/request/work_flow_entity/step_type = 'ON_HOLD_SHELF')">
+                             <h2><div align="right">
+								<b>
+								<!--<xsl:value-of select="notification_data/user_for_printing/name"/>-->
+								<span style="font-size: 75%"><xsl:value-of select="notification_data/request/work_flow_entity/expiration_date"/></span><br />
+								<span style="font-size: 85%"><xsl:value-of select="notification_data/user_for_printing/name"/></span>
+								</b>
+							</div><br />
+							</h2>
+						</xsl:if>
+                             
+    						<!--<p align="right" style="font-size:18px;">Due date:_____________</p>-->
+                                                 <p></p>
+                                                                            
+			</xsl:otherwise>
+			</xsl:choose></div>
+								</td>
+                                </tr>
+                                
+						           <!--- End Special Instructions -->
+			           
+
+
+			
+
+
+
+			<div class="messageArea">
+				<div class="messageBody">
+					 <table cellspacing="0" cellpadding="5" border="0">
+						<xsl:if  test="notification_data/request/selected_inventory_type='ITEM'" >
+						<tr>
+							<td><b>@@note_item_specified_request@@.</b></td>
+						</tr>
+						</xsl:if>
+						<xsl:if  test="notification_data/request/manual_description != ''" >
+						<tr>
+							<td><b>@@please_note@@: </b>@@manual_description_note@@ - <xsl:value-of select="notification_data/request/manual_description"/></td>
+						</tr>
+                        </xsl:if>
+
+
+					 <xsl:if  test="notification_data/external_id != ''" >
+							<tr>
+								<td><b>@@external_id@@: </b><xsl:value-of select="notification_data/external_id"/></td>
+							</tr>
+						</xsl:if> 
+
+						
+
+						<tr>
+							<td><xsl:call-template name="recordTitle" />
+							</td>
+						</tr>
+			
+							<xsl:if test="notification_data/phys_item_display/edition != ''">
+								<tr>
+								<td>@@edition@@: <xsl:value-of select="notification_data/phys_item_display/edition"/></td>
+								</tr>
+							</xsl:if>
+                           
+						
+								<tr>
+								<td><h4><b>@@item_barcode@@: </b><xsl:value-of select="notification_data/phys_item_display/optional_barcodes/string"/></h4></td>
+								</tr>
+						
+						<tr>
+							<td><h4><b>@@location@@: </b><xsl:value-of select="notification_data/phys_item_display/location_name"/></h4></td></tr>
+                                                        
+							<xsl:if test="notification_data/phys_item_display/call_number != ''">
+							<tr><td><h4><b>@@call_number@@: </b><xsl:value-of select="notification_data/phys_item_display/call_number"/></h4></td></tr>
+							</xsl:if>
+							<!-- <xsl:if test="notification_data/phys_item_display/accession_number != ''">
+								<td><h2><b>@@accession_number@@: </b><xsl:value-of select="notification_data/phys_item_display/accession_number"/></h2></td>
+							</xsl:if> -->
+						<xsl:if  test="notification_data/phys_item_display/shelving_location/string" >
+							<xsl:if  test="notification_data/request/selected_inventory_type='ITEM'" >
+							<tr>
+								<td><b>@@shelving_location_for_item@@: </b>
+								 <xsl:for-each select="notification_data/phys_item_display/shelving_location/string">
+									<xsl:value-of select="."/>
+								 &#160;
+								 </xsl:for-each>
+								</td>
+							</tr>
+							</xsl:if>
+							<xsl:if  test="notification_data/request/selected_inventory_type='HOLDING'" >
+							<tr>
+								<td><b>@@shelving_locations_for_holding@@: </b>
+								<xsl:for-each select="notification_data/phys_item_display/shelving_location/string">
+									<xsl:value-of select="."/>
+								&#160;
+								 </xsl:for-each>
+								</td>
+							</tr>
+							</xsl:if>
+							<xsl:if  test="notification_data/request/selected_inventory_type='VIRTUAL_HOLDING'" >
+							<tr>
+								<td><b>@@shelving_locations_for_holding@@: </b>
+								<xsl:for-each select="notification_data/phys_item_display/shelving_location/string">
+									<xsl:value-of select="."/>
+								&#160;
+								 </xsl:for-each>
+								</td>
+							</tr>
+							</xsl:if>
+						</xsl:if>
+						<xsl:if  test="notification_data/phys_item_display/display_alt_call_numbers/string" >
+							<xsl:if  test="notification_data/request/selected_inventory_type='ITEM'" >
+							<tr>
+								<td><b>@@alt_call_number@@: </b>
+								 <xsl:for-each select="notification_data/phys_item_display/display_alt_call_numbers/string">
+									<xsl:value-of select="."/>
+								 &#160;
+								 </xsl:for-each>
+								</td>
+							</tr>
+							</xsl:if>
+							<xsl:if  test="notification_data/request/selected_inventory_type='HOLDING'" >
+							<tr>
+								<td><b>@@alt_call_number@@: </b>
+								<xsl:for-each select="notification_data/phys_item_display/display_alt_call_numbers/string">
+									<xsl:value-of select="."/>
+								&#160;
+								 </xsl:for-each>
+								</td>
+							</tr>
+							</xsl:if>
+							<xsl:if  test="notification_data/request/selected_inventory_type='VIRTUAL_HOLDING'" >
+							<tr>
+								<td><b>@@alt_call_number@@: </b>
+								<xsl:for-each select="notification_data/phys_item_display/display_alt_call_numbers/string">
+									<xsl:value-of select="."/>
+								&#160;
+								 </xsl:for-each>
+								</td>
+							</tr>
+							</xsl:if>
+						</xsl:if>
+
+						<xsl:if test="notification_data/incoming_request/note != ''">
+							<tr>
+							<td><b>@@system_notes@@:</b><xsl:value-of select="notification_data/incoming_request/note"/></td>
+						</tr>
+						</xsl:if>
+
+						<xsl:if test="notification_data/request/note != ''">
+							<tr>
+							<td><b>@@request_note@@:</b> <xsl:value-of select="notification_data/request/note"/></td>
+						</tr>
+						</xsl:if>
+						
+						<tr><td>
+							<xsl:if test="notification_data/user_for_printing/name != ''">
+								<div>
+									<b>Requested For: </b><xsl:value-of select="notification_data/user_for_printing/name"/>
+								</div>
+							</xsl:if>
+							<xsl:if test="notification_data/request/request_type != ''">
+								<div>
+									<b>Request Type: </b><xsl:value-of select="notification_data/request/request_type"/>
+								</div>
+							</xsl:if>
+						</td></tr>
+
+
+					</table>
+				</div>
+			</div>
+
+	<!-- Add Resource Sharing Library if not designated as Resource Sharing -->
+				<br />
+				<br />	
+<xsl:if test="not(/notification_data/request/work_flow_entity/step_type = 'ON_HOLD_SHELF')">				
+<!--
+				<div>
+<br></br>
+
+
+
+					<p align="left" style="font-size:20px; font-family:oshkosh;bottom:0"><b>
+							<xsl:call-template name="reverse">
+								<xsl:with-param name="input">
+									<xsl:call-template name="libLookup"><xsl:with-param name="input" select="/notification_data/phys_item_display/owning_library_name"/></xsl:call-template>
+								</xsl:with-param>
+							</xsl:call-template>
+						</b></p>
+					<p style="font-size:14px; font-family:oshkosh;bottom:0" align="left">: si yrarbiL gninwO</p>
+				 </div>
+-->
+		<div style="position: absolute; bottom: 0; left: 0; transform: rotate(180deg); -webkit-transform: rotate(180deg)">
+			<br /><br />
+			<p style="font-size:14px; bottom:0" align="left">Owning Library is:</p>
+			<p align="left" style="font-size:20px; bottom:0"><b>
+				<xsl:call-template name="libLookup"><xsl:with-param name="input" select="/notification_data/phys_item_display/owning_library_name"/></xsl:call-template>
+				<!--xsl:value-of select="/notification_data/phys_item_display/owning_library_name"/-->
+			</b></p>
+		</div>
+
+</xsl:if>				 
+				
+			</body>
+		</html>
+
+
+	</xsl:template>
+
+	<xsl:template name="GetLastSegment">
+		<xsl:param name="value" />
+		<xsl:param name="separator" select="'.'" />
+
+		<xsl:choose>
+			<xsl:when test="contains($value, $separator)">
+				<xsl:call-template name="GetLastSegment">
+					<xsl:with-param name="value" select="substring-after($value, $separator)" />
+					<xsl:with-param name="separator" select="$separator" />
+				</xsl:call-template>
+			</xsl:when>
+			<xsl:otherwise>
+				<xsl:value-of select="$value" />
+			</xsl:otherwise>
+		</xsl:choose>
+	</xsl:template>
+
+	<xsl:template name="reverse">
+		<xsl:param name="input"/>
+		<xsl:variable name="len" select="string-length($input)"/>
+		<xsl:choose>
+			<!-- Strings of length less than 2 are trivial to reverse -->
+			<xsl:when test="$len &lt; 2">
+				<xsl:value-of select="$input"/>
+			</xsl:when>
+			<!-- Strings of length 2 are also trivial to reverse -->
+			<xsl:when test="$len = 2">
+				<xsl:value-of select="substring($input,2,1)"/>
+				<xsl:value-of select="substring($input,1,1)"/>
+			</xsl:when>
+			<xsl:otherwise>
+				<!-- Swap the recursive application of this template to 
+               the first half and second half of input -->
+				<xsl:variable name="mid" select="floor($len div 2)"/>
+				<xsl:call-template name="reverse">
+					<xsl:with-param name="input"
+                         select="substring($input,$mid+1,$mid+1)"/>
+				</xsl:call-template>
+				<xsl:call-template name="reverse">
+					<xsl:with-param name="input"
+                         select="substring($input,1,$mid)"/>
+				</xsl:call-template>
+			</xsl:otherwise>
+		</xsl:choose>
+	</xsl:template>
+</xsl:stylesheet>
