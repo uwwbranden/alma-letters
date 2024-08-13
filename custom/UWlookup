@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xsl:stylesheet version="1.0"
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+	<xsl:variable name="map">
+		<entry key="Baraboo Sauk County Library">UW Baraboo</entry>
+		<entry key="Barron County Library">UW Barron County</entry>
+		<entry key="Fox Cities Library">UW Fox Cities</entry>
+		<entry key="Fond du Lac Library">UW Fond du Lac</entry>
+		<entry key="Manitowoc Library">Route to UW Green Bay</entry>
+		<entry key="Marinette Library">Route to UW Green Bay</entry>
+		<entry key="Marshfield Library">UW Marshfield</entry>
+		<entry key="Rock County Library">UW Rock County</entry>
+		<entry key="Sheboygan Library">UW Sheboygan</entry>
+		<entry key="Washington County Library">UW Washington</entry>
+		<entry key="Waukesha Library">UW Waukesha</entry>
+		<entry key="Wausau Library">UW Wausau</entry>
+		<entry key="_Baraboo Sauk County Library">UW Baraboo</entry>
+		<entry key="_Fox Cities Library">UW Fox Cities</entry>
+		<entry key="_Fond du Lac Library">UW Fond du Lac</entry>
+		<entry key="_Manitowoc Library">Route to UW Green Bay</entry>
+		<entry key="_Marinette Library">Route to UW Green Bay</entry>
+		<entry key="_Marshfield Library">UW Marshfield</entry>
+		<entry key="_Richland Library">Route to UW-Platteville</entry>
+		<entry key="_Rock County Library">UW Rock County</entry>
+		<entry key="_Sheboygan Library">UW Sheboygan</entry>
+		<entry key="_Wausau Library">UW Wausau</entry>
+		<entry key="Polk Library">UW Oshkosh</entry>
+		<entry key="Elton S. Karrmann Library">UW Platteville</entry>
+		<entry key="Jim Dan Hill Library">UW Superior</entry>
+		<entry key="Chalmer Davee Library">UW River Falls</entry>
+		<entry key="test">UW Test</entry>
+	</xsl:variable>	
+	<xsl:template name="libLookup">
+		<xsl:param name="input"/>
+		<xsl:variable name="replacement" select="document('')//xsl:variable[@name='map']/entry[@key=$input]"/>
+		<xsl:choose>
+			<xsl:when test="not($replacement)">
+				<xsl:value-of select="$input" />
+			</xsl:when>
+			<xsl:otherwise>
+				<xsl:value-of select="$replacement" />
+			</xsl:otherwise>
+		</xsl:choose>
+	</xsl:template>
+</xsl:stylesheet>
