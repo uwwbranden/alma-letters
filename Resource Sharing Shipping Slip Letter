@@ -116,8 +116,10 @@ Use oshkosh font?
 		<!-- Recipient Section -->
 		<div style="padding: 10px 0.8em; font-size: 11pt;">
 			TO:<br />
-			<xsl:value-of select="notification_data/alternate_symbol"/><br />
-			<strong><xsl:value-of select="notification_data/partner_name"/></strong><br />
+			<!--xsl:value-of select="notification_data/alternate_symbol"/--><br />
+		    <xsl:if test="notification_data/partner_name != 'RapidILL'">
+		        <strong><xsl:value-of select="notification_data/partner_name"/></strong><br />
+		    </xsl:if>
 			<xsl:for-each select="notification_data/partner_shipping_info_list/partner_shipping_info">
 				<!-- Loop through address1-5, skipping blanks -->
                 <xsl:for-each select="address1 | address2 | address3 | address4 | address5">
