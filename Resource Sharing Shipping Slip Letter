@@ -1,19 +1,135 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xsl:stylesheet version="1.0"
-xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                version="1.0">
 	<xsl:variable name="counter" select="0"/>
-	
-	<!-- FOOTER: Set to 'false' to use Oshkosh font, 'true' if your slip printer supports css rotation -->
-	<xsl:variable name="footer_use_css" select="'true'"/> 
-
-
-
 	<xsl:include href="header.xsl" />
 	<xsl:include href="senderReceiver.xsl" />
 	<xsl:include href="mailReason.xsl" />
 	<xsl:include href="footer.xsl" />
 	<xsl:include href="style.xsl" />
 	<xsl:include href="recordTitle.xsl" />
+
+
+<!-- Things to change for each campus -->
+	<!-- 
+	Use oshkosh font? 
+		true: use the normal oshkosh font to flip the "return to" text-align (font needs to be installed on the computer that the slip prints from)
+		false: use css to flip the text (doesn't work in all clients, like desktop outlook client)
+	-->
+<xsl:variable name="use_oshkosh_font">true</xsl:variable>
+<xsl:variable name="oclc_symbol">GZT</xsl:variable> <!-- used on minitex slip -->
+<xsl:variable name="mail_return_address"> <!-- used in footer_mail -->
+	UW-Whitewater - ILL<br />
+	Andersen Library<br />
+	750 West Main Street<br />
+	Whitewater, WI 53190
+</xsl:variable>
+<xsl:variable name="debug_partner">false</xsl:variable> <!-- if true, will display what type of slip the template matched with -->
+
+<!-- End - Things to change for each campus -->
+
+<xsl:variable name="partner_type">
+	<xsl:choose>
+		<xsl:when test="starts-with(/notification_data/partner_code, '01UWI')">UW</xsl:when>
+		<xsl:when test="starts-with(/notification_data/partner_name, 'University of Wisconsin')">UW_POD</xsl:when>
+		<xsl:when test="starts-with(/notification_data/partner_code, '01SLCO')">SWITCH</xsl:when>
+		<xsl:when test="starts-with(/notification_data/partner_code, 'A-G:STWI')">WI_PUBLIC</xsl:when>
+		<xsl:when test="contains(/notification_data/incoming_request/pod_id, '381639321420000041')">MINITEX</xsl:when>
+		<xsl:when test="contains(notification_data/incoming_request/note, 'Personal Delivery')">PERSONAL_DELIVERY</xsl:when>
+		<xsl:otherwise>MAIL</xsl:otherwise>
+	</xsl:choose>
+</xsl:variable>
+
+<!-- ##### Shipping headers ##### -->
+<xsl:template name="header_redbox">
+	<xsl:param name="lib"/>
+	<h3>@@supplied_to@@:</h3>
+	<h1><xsl:copy-of select="$lib"/></h1>
+</xsl:template>
+<xsl:template name="header_mail">
+	Route to ILL for shipping
+	<h2>RAPID</h2>
+	<!--xsl:if test="contains(notification_data/partner_name, 'RAPID')">
+	   <h4><b>RAPID Number: </b>-<xsl:value-of select="notification_data/group_qualifier"/></h4>
+		<div class="barcode">*-<xsl:value-of select="notification_data/group_qualifier"/>*</div><br />
+	</xsl:if-->
+</xsl:template>
+<xsl:template name="header_minitex">
+	<!-- Minitex Boxes -->
+</xsl:template>
+
+<!-- ##### Shipping footers ##### -->
+<xsl:template name="footer_redbox">
+	<!-- todo: add oshkosh font -->
+	<xsl:choose>
+		<xsl:when test="$use_oshkosh_font = 'true'">
+			<div class="abs_foot">
+				<p align="left" style="font-size:20px; font-weight: bold; font-family:oshkosh;">
+					<xsl:call-template name="reverse">
+						<xsl:with-param name="input">
+							<xsl:call-template name="libLookup"><xsl:with-param name="input" select="notification_data/item/library_name"/></xsl:call-template>
+						</xsl:with-param>
+					</xsl:call-template></p>
+					<!--div style="font-size:25px; font-weight: bold; font-family:oshkosh;" align="left">yaB neerG-WU</div><br /-->
+					<xsl:if test="contains(notification_data/organization_unit/name, 'Madison')">
+						<div style="font-size:25px; font-weight: bold; font-family:oshkosh;" align="left">nosidaM-WU</div><br/>
+					</xsl:if>
+				<p style="font-size:14px; font-family:oshkosh;" align="left">:oT nruteR</p>
+			</div>
+		</xsl:when>
+		<xsl:otherwise>
+			<div class="abs_foot" style="transform: rotate(180deg); -webkit-transform: rotate(180deg); margin: 0 1em; padding: 0 1em; width: 50%">
+				<p style="font-size:14px;" align="left">Return to:</p>
+				<p align="left" style="font-size:25px; font-weight: bold">
+					<xsl:if test="contains(notification_data/organization_unit/name, 'Madison')">
+						UW-Madison<br/>
+					</xsl:if>
+					<xsl:call-template name="libLookup">
+						<!--xsl:with-param name="input" select="'_Manitowoc Library'"/-->
+						<xsl:with-param name="input" select="notification_data/item/library_name"/>
+					</xsl:call-template>
+				</p>
+			</div>
+		</xsl:otherwise>
+	</xsl:choose>
+
+</xsl:template>
+<xsl:template name="footer_mail">
+	<div style="border:1px solid black; padding:10px; width: 50%">
+		Return To:<br/>
+			<xsl:value-of select="$oclc_symbol"/> / <xsl:value-of select="/notification_data/organization_unit/code"/><br/>
+			<xsl:copy-of select="$mail_return_address"/>
+	</div>
+	<br />
+    <div class="abs_foot" style="width: 50%; border: 1px solid black; padding: 10px; font-size: 9pt;">
+		<!-- Return Address Section -->
+		<div style="padding-bottom: 1em; border-bottom: 1px solid black;">
+			<xsl:copy-of select="$mail_return_address"/>
+		</div>
+
+		<!-- Recipient Section -->
+		<div style="padding: 10px 0.8em; font-size: 11pt;">
+			TO:<br />
+			<xsl:value-of select="notification_data/alternate_symbol"/><br />
+			<strong><xsl:value-of select="notification_data/partner_name"/></strong><br />
+			<xsl:for-each select="notification_data/partner_shipping_info_list/partner_shipping_info">
+				<!-- Loop through address1-5, skipping blanks -->
+                <xsl:for-each select="address1 | address2 | address3 | address4 | address5">
+                    <xsl:if test="normalize-space(.)">
+                        <xsl:value-of select="."/><br />
+                    </xsl:if>
+                </xsl:for-each>
+				<xsl:if test="normalize-space(city)">
+					<xsl:value-of select="city"/>,&#160;<xsl:value-of select="state_province"/>&#160;<xsl:value-of select="state"/>&#160;<xsl:value-of select="postal_code"/>
+				</xsl:if>
+				<xsl:value-of select="country_display"/>
+			</xsl:for-each>
+		</div>
+	</div>
+</xsl:template>
+<xsl:template name="footer_minitex">
+	<!-- Blank for now -->
+</xsl:template>
 
 		<!-- Based on slip created by SMU; modified by Linda Richter;
 				Modifications include:
@@ -23,126 +139,99 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 				* Added in the Wisconsin Letter customizations so this can be used for both State Delivery Systems - KMS@Madison 20211227
 		 -->
 <xsl:template match="/">
-
-			<html>
-				<head>
-				<xsl:call-template name="generalStyle" />
-				<style>
-				.messageArea img {
-				   width: 98%!important;
-				   height: auto!important;
-				}
-				</style>
-			</head>
-
-			<body>
-                <xsl:attribute name="style">
-                    <xsl:call-template name="bodyStyleCss"/><!-- style.xsl -->
-                </xsl:attribute>
-
-  <!-- Letter starts here -->
+<html>
+	<head>
+	<xsl:call-template name="generalStyle" />
+	<style>
+		.barcode { font-family:"Barcode 3 of 9", "3 of 9 Barcode", "Libre Barcode 39"; font-size: 18px; padding-left: 2em }
+		.messageBody {width: 50% }
+		h1 {  }
+		@media print {
+			.abs_foot { position: absolute; bottom: 1em; left: 0 }
+		}
+	</style>
+</head>
+<body>
+	<xsl:attribute name="style">
+		<xsl:call-template name="bodyStyleCss"/><!-- style.xsl -->
+	</xsl:attribute>
+<!-- Letter starts here -->
     <div class="messageArea">
         <div class="messageBody">
-
-
-<!-- Wisconsin Top of the Letter -->
-<table cellspacing="0" cellpadding="10px"  style="margin:0; width:100%;">
-
-	<xsl:choose>
-        <xsl:when test="contains(notification_data/incoming_request/note, 'Personal Delivery')">
-   	    <tr><td valign="top" style="border:0px solid black; width:50%; padding:10px;">
-			<h3 style="text-align: left; weight: bold">@@supplied_to@@: </h3>
-			<h1 style="text-align: left; weight: bold"><xsl:value-of select="notification_data/partner_name"/> - Personal Delivery</h1></td></tr>
-	    </xsl:when>
-			
-	<!--This is our original UW code - Includes Madison now -->
-    <xsl:when test="starts-with(notification_data/partner_code, '01UWI')">
-        <tr>
-			<td>
-            <div valign="top" style="border:0px solid black; width:50%; padding:10px;">
-                <h3 style="text-align: left; font-weight: bold">@@supplied_to@@: </h3>
-                <h1 style="text-align: left; font-weight: bold">
-					<!-- Add "UW-Madison -" so it doesn't just say Memorial Library -->
-                    <xsl:if test="starts-with(notification_data/partner_code, '01UWI_MAD')">
-                        UW-Madison - 
-                    </xsl:if>
-                    <xsl:variable name="request_note_library">
-                        <xsl:call-template name="GetLastSegment">
-                            <xsl:with-param name="value" select="notification_data/incoming_request/note" />
-                            <xsl:with-param name="separator" select="'||'" />
-                        </xsl:call-template>
-                    </xsl:variable>
-                    <xsl:call-template name="libLookup">
-                        <xsl:with-param name="input" select="$request_note_library"/>
-                    </xsl:call-template>
-                </h1>
-                <br />
-                <xsl:if test="notification_data/incoming_request/note">
-                    <p>
-                        <strong>@@request_note@@:</strong> 
-                        <xsl:value-of select="notification_data/incoming_request/note"/>
-                    </p>
-                </xsl:if>
-			</div>	
-            </td>
-        </tr>
-    </xsl:when>
-       
-<!--This the new section we need to correct the letter when we hit eachother in the Minitex Pod-->	
-		<xsl:when test="contains(notification_data/partner_name, 'Wisconsin')">
-         <tr><td valign="top" style="border:0px solid black; width:50%; padding:10px;">
-				<h3 style="text-align: left; weight: bold">@@supplied_to@@: </h3>
-				<h1 style="text-align: left; weight: bold">	
-				<xsl:choose>
-				<xsl:when test="contains(notification_data/partner_name, 'Madison')">UW-Madison</xsl:when>    
-				<xsl:when test="contains(notification_data/partner_name, 'Oshkosh')">UW-Oshkosh</xsl:when>
-		   	    <xsl:when test="contains(notification_data/partner_name, 'Eau Claire')">UW-Eau Claire</xsl:when>
-				<xsl:when test="contains(notification_data/partner_name, 'Barron')">UW-Barron</xsl:when>
-				<xsl:when test="contains(notification_data/partner_name, 'Green Bay')">UW-Green Bay</xsl:when>
-				<xsl:when test="contains(notification_data/partner_name, 'Sheboygan')">UW-Sheboygan</xsl:when>
-                <xsl:when test="contains(notification_data/partner_name, 'Fox')">UW-Fox Cities</xsl:when>
-				<xsl:when test="contains(notification_data/partner_name, 'River Falls')">UW-River Falls</xsl:when>
-                <xsl:when test="contains(notification_data/partner_name, 'Parkside')">UW-Parkside</xsl:when>
-                <xsl:when test="contains(notification_data/partner_name, 'Whitewater')">UW-Whitewater</xsl:when>
-                <xsl:when test="contains(notification_data/partner_name, 'Rock')">UW-Rock County</xsl:when>
-                <xsl:when test="contains(notification_data/partner_name, 'Stevens')">UW-Stevens Point</xsl:when>
-                <xsl:when test="contains(notification_data/partner_name, 'Marshfield')">UW-Marshfield</xsl:when>
-                <xsl:when test="contains(notification_data/partner_name, 'Wausau')">UW-Wausau</xsl:when>
-				<xsl:otherwise>
-
-				</xsl:otherwise>
-				</xsl:choose></h1>
-            <xsl:if test="notification_data/incoming_request/note">
-					<b>@@request_note@@: </b>
-						<xsl:value-of select="notification_data/incoming_request/note"/>
-			</xsl:if>			
-					</td>
-				</tr>
-        </xsl:when>
- 
-<!--Setup for Switch Redbox delivery for WI-->
-	<xsl:when test="starts-with(notification_data/partner_code, '01SLCO')">
-       <tr><td style="font-weight:700;text-align:center;" colspan="2">
-						Route via Red Box<br />
-						Return this slip with the item.
-		</td></tr><tr><td valign="top" style="border:0px solid black; width:50%; padding:10px;">
+<xsl:choose>
+<!-- Personal Delivery -->
+	<xsl:when test="$partner_type = 'PERSONAL_DELIVERY'">
 		<h3 style="text-align: left; weight: bold">@@supplied_to@@: </h3>
-	 		<h1 style="text-align: left; weight: bold">
-			SWITCH <br /> - <xsl:value-of select="normalize-space(substring-after(notification_data/partner_name, ('-')))"/>
-		    </h1><br /><br />
-            <xsl:if test="notification_data/incoming_request/note">
- 					<b>@@request_note@@: </b>
- 					<xsl:value-of select="notification_data/incoming_request/note"/>
- 			</xsl:if></td></tr>	
-        </xsl:when>
+		<h1 style="text-align: left; weight: bold"><xsl:value-of select="notification_data/partner_name"/> - Personal Delivery</h1>
+	</xsl:when>
+	
+<!--This is our original UW lookup code - Includes Madison now -->
+    <xsl:when test="$partner_type = 'UW'">
+		<xsl:call-template name="header_redbox">
+            <xsl:with-param name="lib">
+				<!-- Add "UW-Madison -" so it doesn't just say Memorial Library -->
+				<xsl:if test="starts-with(notification_data/partner_code, '01UWI_MAD')">UW-Madison - <br/></xsl:if>
+				<xsl:call-template name="libLookup">
+					<xsl:with-param name="input">
+						<xsl:call-template name="GetLastSegment">
+							<xsl:with-param name="value" select="notification_data/incoming_request/note" />
+							<xsl:with-param name="separator" select="'||'" />
+						</xsl:call-template>
+					</xsl:with-param>
+				</xsl:call-template>
+			</xsl:with-param>
+        </xsl:call-template>
+    </xsl:when>
+
+<!-- Additional lookup to to catch UW's in pods. Could probably be merged into libLookup someday -->
+	<xsl:when test="$partner_type = 'UW_POD'">
+		<xsl:call-template name="header_redbox">
+			<xsl:with-param name="lib">
+				<xsl:choose>
+					<xsl:when test="contains(notification_data/partner_name, 'Memorial')">UW-Madison -<br />Memorial </xsl:when>    
+					<xsl:when test="contains(notification_data/partner_name, 'Madison')">UW-Madison -<br/>______ </xsl:when>    
+					<xsl:when test="contains(notification_data/partner_name, 'ILL')">UW-Madison -<br/>______ </xsl:when>   
+					<xsl:when test="contains(notification_data/partner_name, 'Fox Cities Library')">UW-Fox Cities</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Oshkosh')">UW-Oshkosh</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Polk Library')">UW-Oshkosh</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'UW-Oshkosh Library')">UW-Oshkosh</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Barron Library')">UW-Barron</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'McIntyre Library')">UW-Eau Claire</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Sheboygan Library')">UW-Sheboygan</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Green Bay Library')">UW-Green Bay</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'River Falls')">UW-River Falls</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Parkside')">UW-Parkside</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Rock County Library')">UW-Rock County</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Whitewater Library')">UW-Whitewater</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Wausau Library')">UW-Wausau</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Marshfield Library')">UW-Marshfield</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'UW-Stevens')">UW-Stevens Point</xsl:when>
+					<xsl:otherwise>  
+						<xsl:if test="notification_data/incoming_request/borrowing_institution">
+							<xsl:value-of select="notification_data/incoming_request/borrowing_institution"/>
+						</xsl:if>
+						<xsl:if test="notification_data/partner_name">
+							<xsl:value-of select="notification_data/partner_name"/>
+						</xsl:if>
+					</xsl:otherwise>
+				</xsl:choose>
+			</xsl:with-param>
+		</xsl:call-template>
+   </xsl:when>
+   
+<!--Setup for Switch Redbox delivery for WI-->
+	<xsl:when test="$partner_type = 'SWITCH'">
+		<xsl:call-template name="header_redbox">
+            <xsl:with-param name="lib">
+				SWITCH -<br /><xsl:value-of select="normalize-space(substring-after(notification_data/partner_name, ('-')))"/>
+            </xsl:with-param>
+        </xsl:call-template>
+	</xsl:when>
 
 <!--Setup for Public Libraries-->
-<xsl:when test="starts-with(notification_data/partner_code, 'A-G:STWI')">
-        <tr><td style="font-weight:700;text-align:center;" colspan="2">
-						Route via Red Box<br />
-						Return this slip with the item.
-		</td></tr>
-       <tr><td valign="top" style="border:0px solid black; width:50%; padding:10px;">
+	<xsl:when test="$partner_type = 'WI_PUBLIC'">
+		Route via Red Box<br />
+		Return this slip with the item.
 		<h3 style="text-align: left; weight: bold">@@supplied_to@@: </h3>
 	 		<h1 style="text-align: left; weight: bold">
             <xsl:for-each select="notification_data/partner_shipping_info_list/partner_shipping_info">
@@ -151,382 +240,229 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             <h4><xsl:value-of select="address3"/></h4>
             <h4><xsl:value-of select="city"/>&#160;<xsl:value-of select="state_province"/>&#160;<xsl:value-of select="state"/>&#160;<xsl:value-of select="postal_code"/></h4>
 			</xsl:for-each></h1>
-		    <br /><br />
-            <xsl:if test="notification_data/incoming_request/note">
- 					<b>@@request_note@@: </b>
- 					<xsl:value-of select="notification_data/incoming_request/note"/>
- 			</xsl:if></td></tr>		
-        </xsl:when>
-
-<!--MN top part of letter (Replace your own OCLC code and name) -->
-<xsl:when test="contains(notification_data/incoming_request/pod_id, '381639321420000041')">
-<tr><td style="font-weight:700;text-align:left;" colspan="2">
-						Route via Minitex Courier<br />
-						Return this slip with the item.
-				</td></tr>
-<tr>
+		    <br />
+	</xsl:when>
+<!--MN top part of letter -->
+	<xsl:when test="$partner_type = 'MINITEX'">
+		Route via Minitex Courier<br />
+		Return this slip with the item.
 		<!-- Borrower cell -->
-					<td valign="top" style="border:1px solid black; width:50%; padding:10px;">
-                 
-						<b>@@supplied_to@@:</b><br />
-
-						<!-- Borrower code -->
-						<span style="font-size:64px; font-weight:700; padding-bottom: 20px;" class="visible">
+		<div style="border:1px solid black; padding:10px;">
+			<b>@@supplied_to@@:</b><br />
+			<!-- Borrower code -->
+			<span style="font-size:64px; font-weight:700; padding-bottom: 20px;" class="visible">
 				<xsl:choose>
-				<xsl:when test="contains(notification_data/partner_name, 'Ireland Library')">SSE</xsl:when>
-		   	    <xsl:when test="contains(notification_data/partner_name, 'Keffer Library')">MNTMP</xsl:when>
-				<xsl:when test="contains(notification_data/partner_name, 'Thomas Law Library')">TL#</xsl:when>
-				<xsl:when test="contains(notification_data/partner_name, 'Shaughnessy-Frey Library')">MNT</xsl:when>
-				<xsl:when test="contains(notification_data/partner_name, 'Bethel')">MNK</xsl:when>
-                <xsl:when test="contains(notification_data/partner_name, 'Hamline')">MHA</xsl:when>
-				<xsl:when test="contains(notification_data/partner_name, 'Bridge')">MNO</xsl:when>
-                <xsl:when test="contains(notification_data/partner_name, 'MORRIS Briggs')">MNX</xsl:when>
-                <xsl:when test="contains(notification_data/partner_name, 'DULUTH Martin')">MND</xsl:when>
-                <xsl:when test="contains(notification_data/partner_name, 'CROOKSTON Moe')">MCR</xsl:when>
-				<xsl:when test="contains(notification_data/partner_name, 'University of Minnesota')">MNU</xsl:when>
-				<xsl:when test="contains(notification_data/partner_name, 'Minitex')">MII</xsl:when>
-				<xsl:otherwise>
-
-				</xsl:otherwise>
+					<xsl:when test="contains(notification_data/partner_name, 'Ireland Library')">SSE</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Keffer Library')">MNTMP</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Thomas Law Library')">TL#</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Shaughnessy-Frey Library')">MNT</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Bethel')">MNK</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Hamline')">MHA</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Bridge')">MNO</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'MORRIS Briggs')">MNX</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'DULUTH Martin')">MND</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'CROOKSTON Moe')">MCR</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'University of Minnesota')">MNU</xsl:when>
+					<xsl:when test="contains(notification_data/partner_name, 'Minitex')">MII</xsl:when>
+					<xsl:otherwise>
+					</xsl:otherwise>
 				</xsl:choose>
-        </span><!-- end borrower code -->
- <br /><br />
+			</span><!-- end borrower code -->
+			<div class="barcode" style="padding-left: 0; text-align: center; font-size: 16px">*<xsl:value-of select="notification_data/group_qualifier"/>*</div>
+			<b>@@borrower_reference@@: </b><xsl:value-of select="notification_data/group_qualifier"/><br />
+			<b>Borrower: </b><xsl:value-of select="notification_data/partner_name"/><br />
+			<b>Request Date: </b><xsl:value-of select="notification_data/incoming_request/create_date"/><br />
+			<b>Due Date: </b>_______________________________________<br />
+		</div>
+		<!-- Lender cell -->
+		<div style="border:1px solid black; padding:10px;">
+			<b>Return to:</b><br />
 
-        <xsl:variable name="sBarcode1" select="'https://lendingslip.mnpals.net/barcode.php?text='" />
-        <xsl:variable name="sBarcode">
-          <xsl:value-of select="$sBarcode1"/>
-          <xsl:call-template name="id-info-hdr"/>
-        </xsl:variable>
-        <img width="320" style="width:310px!important; max-width: 310px!important;" src="{$sBarcode}" />
-        <br/><br />
-
-        <b>@@borrower_reference@@: </b><xsl:call-template name="MnPALS_borrowerID">
-            <xsl:with-param name="reqID" select="notification_data/incoming_request/external_request_id"/>
-        </xsl:call-template><br />
-        <b>Borrower: </b><xsl:value-of select="notification_data/partner_name"/><br />
-        <b>Request Date: </b><xsl:value-of select="notification_data/incoming_request/create_date"/><br />
-        <b>Due Date: </b>_______________________________________<br />
-        <br />
-    </td>
-
-				<!-- Lender cell -->
-			   <td valign="top" style="border:1px solid black; width:50%; padding:10px;">
-						<b>Return to:</b><br />
-
-						<!-- Lender code -->
-						<span style="font-size:64px; font-weight:700; padding-bottom: 20px;" class="visible">
-						GZM</span><br />
-						<b>Lender: </b>UW-Madison <xsl:value-of select="notification_data/item/library_name"/>
-						<!-- end lender code -->
-						<br /><br /><br />
-
-						<b>@@external_identifier@@: </b><xsl:value-of select="notification_data/incoming_request/external_request_id"/><br />
-						<b>Printed Date: </b><xsl:value-of select="notification_data/incoming_request/print_slip_date"/><br />
-						<b>@@date_needed_by@@: </b><xsl:value-of select="notification_data/incoming_request/needed_by"/><br />
-				</td>
-				<!-- end lender cell -->
-</tr>
-				
-       
-<!-- Simon 02/14/2020: Add note into lending slip -->
-<xsl:if test="notification_data/incoming_request/note">
-    <tr>
-        <td colspan="2" style="border: 1px solid black; margin:0" >
-            <b>@@request_note@@: </b>
-            <xsl:value-of select="notification_data/incoming_request/note"/>
-        </td>
-    </tr>
-</xsl:if>
+			<!-- Lender code -->
+			<span style="font-size:64px; font-weight:700; padding-bottom: 20px;" class="visible">
+			<xsl:value-of select="$oclc_symbol"/></span><br />
+			<b>Lender: </b><xsl:value-of select="notification_data/item/library_name"/>
+			<!-- end lender code -->
+			<br /><br /><br />
+			<b>@@external_identifier@@: </b><xsl:value-of select="notification_data/group_qualifier"/><br />
+			<b>Printed Date: </b><xsl:value-of select="notification_data/incoming_request/print_slip_date"/><br />
+			<b>@@date_needed_by@@: </b><xsl:value-of select="notification_data/incoming_request/needed_by"/><br />
+		</div>
+		<!-- end lender cell -->
 </xsl:when>
-
 <xsl:otherwise>
-<!--For all other RAPIDO pods (Replace your address and info in the return section)-->
-		<tr><td style="font-weight:700;text-align:left;" colspan="2">
-						Route to ILL - Needs to ship UPS<br />
-						Outgoing RS Lending - Ship to Borrowing Library<br />
-		</td></tr>
-			<tr><td align="left" style="font-size:22px;">
-			    <b>Created Date:</b><xsl:value-of select="notification_data/organization_unit/create_date"/><p></p>
- 	  	<xsl:if test="contains(notification_data/partner_name, 'RAPID')">
-		   <h4><b>RAPID Number: </b>-<xsl:value-of select="notification_data/group_qualifier"/></h4>
-            <p></p>
-            <div style='font-size:35px;font-family:"3 of 9 Barcode"'>*-<xsl:value-of select="notification_data/group_qualifier"/>*</div>
-            <p></p>
-        </xsl:if>
-            
-        <h4><b>Request ID (Ex ID):</b><xsl:value-of select="notification_data/group_qualifier"/></h4>
-        <p></p>
-        <div style='font-size:35px;font-family:"3 of 9 Barcode"'>*<xsl:value-of select="notification_data/group_qualifier"/>*</div>
-        <p></p>
-    </td></tr>
-<!--Shipping info-->
-	<table cellspacing="0" cellpadding="0" border="1" colspan="2">
-	<tr>
-		<td style="border:1px solid black; width:50%; padding:10px; font-size:12px;width:350px">
-		    Ship To:<br></br>
-		    <div style="font-size:18px; font-weight:700" > 
-		    <xsl:value-of select="notification_data/alternate_symbol"/><br />
-           	<strong><xsl:value-of select="notification_data/partner_name"/></strong><br />
-                <xsl:for-each select="notification_data/partner_shipping_info_list/partner_shipping_info">
-			<center><xsl:value-of select="address1"/><br />
-			        <xsl:value-of select="address2"/><br />
-			        <xsl:value-of select="address3"/><br />
-			        <xsl:value-of select="address4"/><br />
-			        <xsl:value-of select="address5"/></center>
-			<center><xsl:value-of select="city"/>&#160;<xsl:value-of select="state_province"/>&#160;<xsl:value-of select="state"/>&#160;<xsl:value-of select="postal_code"/></center>
-                       <center><xsl:value-of select="country_display"/></center>
-		</xsl:for-each></div>
-        </td>
-        <td style="border:1px solid black; width:50%; padding:10px; font-size:18px; width:350px">
-<!--Return info (edit here) -->
-            Return To:<br></br>
-                <center>01UWIMAD</center>
-				<center>UW-Madison ILL Dept</center>
-                <center>728 State Street - B106B</center>
-                <center>Madison, WI 53706</center>
-				<center>USA</center><br></br>
-                </td></tr>
-	</table>
-
-	
+	<xsl:call-template name="header_mail"/>
 </xsl:otherwise>
 </xsl:choose>
 
-<!-- START Requested item -->
-	<tr>
-		<td>
-		<div class="requested_item" style="width: 50%">
-			<p align="left" style="font-size:18px;">
-				<xsl:if test="notification_data/group_qualifier">
-					<b>@@group_qualifier@@: </b><xsl:value-of select="notification_data/incoming_request/external_request_id"/>
-				</xsl:if>
-			</p>
-			<p align="left" style="font-size:18px; font-weight:bold;">Due date:_____________</p>
-			<p align="left" style="font-size:22px; font-weight:bold;">Please do not remove this slip.</p>
-			
-			<xsl:if test="notification_data/incoming_request/multi_barcode_visible = 'true'">
-				<br/>
-				<div style="font-size: larger; background: #CCC">
-					<b>MULTIPLE BARCODES:</b><br/>
-					This request has <b><xsl:value-of select="count(/notification_data/multi_barcodes/string)"/></b> items
-				</div>
-			</xsl:if>
-			<br/>
-			<b>@@title@@: </b><xsl:value-of select="notification_data/metadata/title"/><br/>
-			<b>@@author@@: </b><xsl:value-of select="notification_data/metadata/author"/><br/>
-			
-			<xsl:if test="notification_data/metadata/issn != ''">
-				<b>@@issn@@: </b><xsl:value-of select="notification_data/metadata/issn"/><br/>
-			</xsl:if>
-			
-			<xsl:if test="notification_data/metadata/isbn != ''">
-				<b>@@isbn@@: </b><xsl:value-of select="notification_data/items/physical_item_display_for_printing/isbn"/><br/>
-			</xsl:if>
-			
-			<b>@@publisher@@: </b><xsl:value-of select="notification_data/metadata/publisher"/>, <xsl:value-of select="notification_data/metadata/place_of_publication"/><br/>
-			<b>@@publication_date@@: </b><xsl:value-of select="notification_data/metadata/publication_date"/><br/>
-			<b>@@call_number@@: </b><xsl:value-of select="notification_data/item/call_number"/><br/>
-			
-			<xsl:if test="shelving_location/string">
-				<b>@@shelving_location_for_item@@: </b>
-				<xsl:for-each select="shelving_location/string">
-					<xsl:value-of select="."/>
-					<br/>
-				</xsl:for-each>
-			</xsl:if>
-			
-			<xsl:if test="notification_data/item">
-				<xsl:choose>
-					<xsl:when test="notification_data/incoming_request/multi_barcode_visible = 'true'">
-						<div style="font-size: larger; font-weight: bold; background: #CCC">
-							This request has <xsl:value-of select="count(/notification_data/multi_barcodes/string)"/> items.
-						</div>
-						<b>Item Barcodes: </b><br/>
-						<xsl:for-each select="/notification_data/multi_barcodes/string">
-							<xsl:value-of select="."/>
-							<br/>
-						</xsl:for-each>
-					</xsl:when>
-					<xsl:otherwise>
-						<b>@@item_barcode@@: </b><xsl:value-of select="notification_data/item/barcode"/><br/>
-					</xsl:otherwise>
-				</xsl:choose>
-			</xsl:if>
+	<!-- START Requested item  -->
+	<xsl:call-template name="request_info"/>
+	</div>
+</div>
 
-			<!-- Properties that may or may not be present -->
-
-			<xsl:if test="notification_data/metadata/edition != ''">
-				<b>@@edition@@: </b><xsl:value-of select="notification_data/items/physical_item_display_for_printing/edition"/><br/>
-			</xsl:if>
-			
-			<xsl:if test="notification_data/metadata/journal_title != ''">
-				<b>@@journal_title@@: </b><xsl:value-of select="notification_data/metadata/journal_title"/><br/>
-			</xsl:if>
-			
-			<xsl:if test="notification_data/metadata/volume != ''">
-				<b>@@volume@@: </b><xsl:value-of select="notification_data/metadata/volume"/><br/>
-			</xsl:if>
-			
-			<xsl:if test="notification_data/metadata/issue != ''">
-				<b>@@issue@@: </b><xsl:value-of select="notification_data/metadata/issue"/><br/>
-			</xsl:if>
-			
-			<xsl:if test="notification_data/incoming_request/format">
-				<b>@@format@@: </b><xsl:value-of select="notification_data/incoming_request/format"/> - <xsl:value-of select="notification_data/metadata/material_type"/><br/>
-			</xsl:if>
-
-			<!-- Note addition -->
-			<xsl:if test="notification_data/metadata/note">
-				<b>Note: </b><xsl:value-of select="notification_data/metadata/note"/><br/>
-			</xsl:if>
-		</div>
-		</td>
-	</tr>
-
-				</table>
-				</div>
-				</div>
-
-<!--WI Footer (Replace your name with the return to)-->
-<!-- WI Footer (Replace your name with the return to)-->
 <xsl:choose>
-    <xsl:when test="
-    starts-with(notification_data/partner_code, '01UWI') or
-    contains(notification_data/partner_name, 'Wisconsin') or
-    contains(notification_data/incoming_request/borrowing_institution, 'Wisconsin') or
-    starts-with(notification_data/partner_code, '01SLCO') or
-    starts-with(notification_data/partner_code, 'A-G:STWI')
-		">
-    <!-- '01UWI' - WI Footer -->
-    <!-- 'Wisconsin' - WI Footer to fix us hitting in the pods -->
-    <!-- 'Wisconsin' - WI Footer to fix us hitting in RAPIDR -->
-    <!-- '01SLCO' - Switch Footer -->
-    <!-- 'A-G:STWI' - Public Library -->
-		<xsl:choose>
-			<xsl:when test="$footer_use_css = 'true'">
-				<div style="position: absolute; bottom: 0; left: 0; transform: rotate(180deg); -webkit-transform: rotate(180deg); margin: 0 1em; padding: 0 1em">
-					<p style="font-size:14px;" align="left">Return to:</p>
-					<p align="left" style="font-size:25px;">
-						<b>
-							<xsl:call-template name="libLookup">
-								<xsl:with-param name="input" select="notification_data/item/library_name"/>
-							</xsl:call-template>
-						</b>
-					</p>
-				</div>
-			</xsl:when>
-			<xsl:otherwise>
-				<div style="position: absolute; bottom: 0; left: 0">
-					<p align="left" style="font-size:20px; font-weight: bold; font-family:oshkosh;">
-						<xsl:call-template name="reverse">
-							<xsl:with-param name="input">
-								<xsl:call-template name="libLookup">
-									<xsl:with-param name="input" select="notification_data/item/library_name"/>
-								</xsl:call-template>
-							</xsl:with-param>
-						</xsl:call-template>
-					</p>
-					<!-- Uncomment if Madison
-					<div style="font-size:25px; font-weight: bold; font-family:oshkosh;" align="left">nosidaM-WU</div>
-					-->
-					<br/>
-					<p style="font-size:14px; font-family:oshkosh;" align="left">:oT nruteR</p>
-				</div>
-			</xsl:otherwise>
-		</xsl:choose>
+	<!--WI Footer-->
+    <xsl:when test="$partner_type = 'UW' or  
+                    $partner_type = 'UW_POD' or
+                    $partner_type = 'SWITCH' or
+                    $partner_type = 'WI_PUBLIC'">
+        <xsl:call-template name="footer_redbox"/>
     </xsl:when>
-
-    <xsl:otherwise>
-        <!-- Handle other cases here if needed -->
-    </xsl:otherwise>
+	<!-- Minitext Footer -->
+	<xsl:when test="$partner_type = 'MINITEX'">
+		<xsl:call-template name="footer_minitex"/>
+    </xsl:when>
+	<!--Mail Footer-->
+	<xsl:otherwise>
+		<xsl:call-template name="footer_mail"/>			
+	</xsl:otherwise>
 </xsl:choose>
 
+<!-- ### DEBUG partner ### -->
+<xsl:if test="$debug_partner = 'true'">
+	<h1 style="color: red"><xsl:value-of select="$partner_type"/></h1>
+</xsl:if>
 </body>
 </html>
 </xsl:template>
-
 <!-- Template section -->
-<xsl:template name="id-info">
-		<xsl:param name="line"/>
-
-		<xsl:variable name="first" select="substring-before($line, '//')"/>
-		<xsl:variable name="rest" select="substring-after($line, '//')"/>
-		<xsl:if test="$first = '' and $rest = ''">
-				<!--br/-->
-		</xsl:if>
-		<xsl:if test="$rest != ''">
-				<xsl:value-of select="$rest"/>
-				<br/>
-		</xsl:if>
-		<xsl:if test="$rest = ''">
-				<xsl:value-of select="$line"/>
-				<br/>
-		</xsl:if>
-</xsl:template>
-
-<xsl:template name="id-info-hdr">
-		<xsl:call-template name="id-info">
-				<xsl:with-param name="line" select="notification_data/incoming_request/external_request_id"/>
-				<xsl:with-param name="label" select="'Bibliographic Information:'"/>
-		</xsl:call-template>
-</xsl:template>
-
-<xsl:template name="MnPALS_borrowerID">
-		<xsl:param name="reqID"/>
-		<xsl:variable name="number" select="substring-after($reqID, '//')"/>
-		<xsl:value-of select="$number"/>
-</xsl:template>
-
-<xsl:template name="MnPALS_borrowerCode">
-		<xsl:param name="borrowerName"/>
-		<xsl:variable name="code" select="substring-before($borrowerName, ' ')"/>
-		<xsl:value-of select="$code"/>
-</xsl:template>
-
 
 <xsl:template name="GetLastSegment">
-<xsl:param name="value" />
-<xsl:param name="separator" select="'.'" />
-
-		<xsl:choose>
-			<xsl:when test="contains($value, $separator)">
-				<xsl:call-template name="GetLastSegment">
-					<xsl:with-param name="value" select="substring-after($value, $separator)" />
-					<xsl:with-param name="separator" select="$separator" />
-				</xsl:call-template>
-			</xsl:when>
-			<xsl:otherwise>
-				<xsl:value-of select="$value" />
-			</xsl:otherwise>
-		</xsl:choose>
+	<xsl:param name="value" />
+	<xsl:param name="separator" select="'.'" />
+	<xsl:choose>
+		<xsl:when test="contains($value, $separator)">
+			<xsl:call-template name="GetLastSegment">
+				<xsl:with-param name="value" select="substring-after($value, $separator)" />
+				<xsl:with-param name="separator" select="$separator" />
+			</xsl:call-template>
+		</xsl:when>
+		<xsl:otherwise>
+			<xsl:value-of select="$value" />
+		</xsl:otherwise>
+	</xsl:choose>
 </xsl:template>
 
-	<xsl:template name="reverse">
-		<xsl:param name="input"/>
-		<xsl:variable name="len" select="string-length($input)"/>
+<xsl:template name="reverse">
+	<xsl:param name="input"/>
+	<xsl:variable name="len" select="string-length($input)"/>
+	<xsl:choose>
+		<!-- Strings of length less than 2 are trivial to reverse -->
+		<xsl:when test="$len &lt; 2">
+			<xsl:value-of select="$input"/>
+		</xsl:when>
+		<!-- Strings of length 2 are also trivial to reverse -->
+		<xsl:when test="$len = 2">
+			<xsl:value-of select="substring($input,2,1)"/>
+			<xsl:value-of select="substring($input,1,1)"/>
+		</xsl:when>
+		<xsl:otherwise>
+			<!-- Swap the recursive application of this template to
+		   the first half and second half of input -->
+			<xsl:variable name="mid" select="floor($len div 2)"/>
+			<xsl:call-template name="reverse">
+				<xsl:with-param name="input"
+					 select="substring($input,$mid+1,$mid+1)"/>
+			</xsl:call-template>
+			<xsl:call-template name="reverse">
+				<xsl:with-param name="input"
+					 select="substring($input,1,$mid)"/>
+			</xsl:call-template>
+		</xsl:otherwise>
+	</xsl:choose>
+</xsl:template>
+	
+<xsl:template name="request_info">
+    <!-- START Requested item -->
+	<p align="left" style="font-size:18px;">
+		<xsl:if test="notification_data/group_qualifier">
+			<b>@@group_qualifier@@: </b>
+			<xsl:value-of select="notification_data/group_qualifier"/><br />
+			<span class="barcode">*<xsl:value-of select="notification_data/group_qualifier"/>*</span>
+		</xsl:if>
+	</p>
+	<p align="left" style="font-size:18px; font-weight:bold;">Due date:_____________</p>
+	<p align="left" style="font-size:20px; font-weight:bold;">Please do not remove this slip.</p>
+
+	<xsl:if test="notification_data/incoming_request/multi_barcode_visible = 'true'">
+		<br />
+		<div style="font-size: larger; background: #CCC">
+			<b>MULTIPLE BARCODES:</b><br />
+			This request has <b><xsl:value-of select="count(/notification_data/multi_barcodes/string)"/></b> items
+		</div>
+	</xsl:if>
+	<br />
+	<b>@@title@@: </b><xsl:value-of select="notification_data/metadata/title"/><br />
+	<b>@@author@@: </b><xsl:value-of select="notification_data/metadata/author"/><br />
+	<xsl:if test="notification_data//metadata/issn != ''">
+		<b>@@issn@@: </b><xsl:value-of select="notification_data/metadata/issn"/><br />
+	</xsl:if>
+	<!--
+	<xsl:if test="notification_data/metadata/isbn != ''">
+		<b>@@isbn@@: </b><xsl:value-of select="notification_data/items/physical_item_display_for_printing/isbn"/><br />
+	</xsl:if>
+	<b>@@publisher@@: </b><xsl:value-of select="notification_data/metadata/publisher"/>, &#160;<xsl:value-of select="notification_data/metadata/place_of_publication"/><br />
+	<b>@@publication_date@@: </b><xsl:value-of select="notification_data/metadata/publication_date"/><br />
+	-->
+	<b>@@call_number@@: </b><xsl:value-of select="notification_data/item/call_number"/><br />
+	<xsl:if test="shelving_location/string">
+		<b>@@shelving_location_for_item@@: </b>
+		<xsl:for-each select="shelving_location/string">
+			<xsl:value-of select="."/>&#160;
+		</xsl:for-each>
+	</xsl:if>
+	<xsl:if test="notification_data/item">
 		<xsl:choose>
-			<!-- Strings of length less than 2 are trivial to reverse -->
-			<xsl:when test="$len &lt; 2">
-				<xsl:value-of select="$input"/>
-			</xsl:when>
-			<!-- Strings of length 2 are also trivial to reverse -->
-			<xsl:when test="$len = 2">
-				<xsl:value-of select="substring($input,2,1)"/>
-				<xsl:value-of select="substring($input,1,1)"/>
+			<xsl:when test="notification_data/incoming_request/multi_barcode_visible = 'true'">
+				<div style="font-size: larger; font-weight: bold; background: #CCC">
+					This request has <xsl:value-of select="count(/notification_data/multi_barcodes/string)"/> items.
+				</div>
+				<b>Item Barcodes: </b><br />
+				<xsl:for-each select="/notification_data/multi_barcodes/string">
+					<xsl:value-of select="."/><br />
+				</xsl:for-each>
 			</xsl:when>
 			<xsl:otherwise>
-				<!-- Swap the recursive application of this template to
-               the first half and second half of input -->
-				<xsl:variable name="mid" select="floor($len div 2)"/>
-				<xsl:call-template name="reverse">
-					<xsl:with-param name="input"
-                         select="substring($input,$mid+1,$mid+1)"/>
-				</xsl:call-template>
-				<xsl:call-template name="reverse">
-					<xsl:with-param name="input"
-                         select="substring($input,1,$mid)"/>
-				</xsl:call-template>
+				<b>@@item_barcode@@: </b>
+				<xsl:value-of select="notification_data/item/barcode"/><br />
 			</xsl:otherwise>
 		</xsl:choose>
-	</xsl:template>
+	</xsl:if>
+	<!-- Properties that may or may not be present -->
+	<xsl:if test="notification_data/metadata/edition != ''">
+		<b>@@edition@@: </b>
+		<xsl:value-of select="notification_data/items/physical_item_display_for_printing/edition"/><br />
+	</xsl:if>
+	<xsl:if test="notification_data/metadata/journal_title != ''">
+		<b>@@journal_title@@: </b>
+		<xsl:value-of select="notification_data/metadata/journal_title"/><br />
+	</xsl:if>
+	<xsl:if test="notification_data/metadata/volume != ''">
+		<b>@@volume@@: </b>
+		<xsl:value-of select="notification_data/metadata/volume"/><br />
+	</xsl:if>
+	<xsl:if test="notification_data/metadata/issue != ''">
+		<b>@@issue@@: </b>
+		<xsl:value-of select="notification_data/metadata/issue"/><br />
+	</xsl:if>
+
+	<xsl:if test="notification_data/incoming_request/format">
+		<b>@@format@@: </b>
+		<xsl:value-of select="notification_data/incoming_request/format"/> -
+		<xsl:value-of select="notification_data/metadata/material_type"/>
+		<br />
+	</xsl:if>
+
+	<b>@@request_note@@: </b>
+	<xsl:value-of select="notification_data/metadata/note"/><br/>		
+	<xsl:choose>
+	  <xsl:when test="contains(notification_data/incoming_request/note, '||')">
+		<xsl:value-of select="substring-before(notification_data/incoming_request/note, '||')"/>
+	  </xsl:when>
+	  <xsl:otherwise>
+		<xsl:value-of select="notification_data/incoming_request/note"/>
+	  </xsl:otherwise>
+	</xsl:choose>
+</xsl:template>
+	
 </xsl:stylesheet>
