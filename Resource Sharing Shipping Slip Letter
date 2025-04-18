@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-                version="1.0">
-
-
+                version="3.0">
 <!-- Things to change for each campus -->
 <!-- 
 Use oshkosh font? 
@@ -116,10 +114,8 @@ Use oshkosh font?
 		<!-- Recipient Section -->
 		<div style="padding: 10px 0.8em; font-size: 11pt;">
 			TO:<br />
-			<!--xsl:value-of select="notification_data/alternate_symbol"/--><br />
-		    <xsl:if test="notification_data/partner_name != 'RapidILL'">
-		        <strong><xsl:value-of select="notification_data/partner_name"/></strong><br />
-		    </xsl:if>
+			<xsl:value-of select="notification_data/alternate_symbol"/><br />
+			<strong><xsl:value-of select="notification_data/partner_name"/></strong><br />
 			<xsl:for-each select="notification_data/partner_shipping_info_list/partner_shipping_info">
 				<!-- Loop through address1-5, skipping blanks -->
                 <xsl:for-each select="address1 | address2 | address3 | address4 | address5">
@@ -155,7 +151,9 @@ Use oshkosh font?
 		.messageBody, .abs_foot, .foot {width: 45% }
 		h1 {  }
 		@media print {
-			.abs_foot { position: fixed; bottom: 5mm; left: 0 }
+		    html { height: 95%; }
+		    body { height: 100%; }
+			.abs_foot { position: fixed; bottom: 5mm; left: 0; }
 		}
 	</style>
 </head>
@@ -211,11 +209,23 @@ Use oshkosh font?
 					<!--<xsl:when test="contains($partner, 'Memorial')">UW-Madison -<br />||Memorial </xsl:when>    -->
 					<xsl:when test="contains($partner, 'Madison') or contains($partner, 'ILL')">
                         UW-Madison -||<br/>
+                        <xsl:variable name="note" select="/notification_data/incoming_request/note"/>
                         <xsl:variable name="pickup">
                             <xsl:choose>
-                                <xsl:when test="substring-after(/notification_data/incoming_request/note, 'Pickup at: ') != ''">
-                                    <xsl:value-of select="substring-after(/notification_data/incoming_request/note, 'Pickup at: ')" />
+                                <xsl:when test="substring-after($note, 'Pickup at: ') != ''">
+                                    <xsl:variable name="parts" select="tokenize($note, '\|\|')"/>
+                                    <xsl:if test="count($parts) > 1">
+                                      <xsl:value-of select="$parts[last()]"/>
+                                    </xsl:if>
+                                    <xsl:analyze-string select="$note" regex="Pickup at: (.*?) \|\|">
+                                      <xsl:matching-substring>
+                                        ||<xsl:value-of select="regex-group(1)"/>
+                                      </xsl:matching-substring>
+                                      <xsl:non-matching-substring/>
+                                    </xsl:analyze-string>
+                                    <xsl:value-of select="/notification_data/incoming_request/borrowing_library" />
                                 </xsl:when>
+                                
                                 <xsl:when test="/notification_data/incoming_request/borrowing_library != ''">
                                     <xsl:value-of select="/notification_data/incoming_request/borrowing_library" />
                                 </xsl:when>
@@ -301,6 +311,7 @@ Use oshkosh font?
 					<xsl:when test="contains(notification_data/partner_name, 'University of Minnesota')">MNU</xsl:when>
 					<xsl:when test="contains(notification_data/partner_name, 'Minitex')">MII</xsl:when>
 					<xsl:otherwise>
+					    <xsl:value-of select="if (matches(notification_data/partner_name, '\(.*\)')) then replace(notification_data/partner_name, '^.*?\((.*?)\).*$', '$1') else ''"/>
 					</xsl:otherwise>
 				</xsl:choose>
 			</span><!-- end borrower code -->
@@ -499,6 +510,8 @@ Use oshkosh font?
 		<xsl:value-of select="notification_data/incoming_request/note"/>
 	  </xsl:otherwise>
 	</xsl:choose>
+	<!-- printed timestamp - useful for finding correct letter for troubleshooting -->
+	<span style="font-size: smaller; color: #999"><xsl:value-of select="/notification_data/general_data/current_date"/> - <xsl:value-of select="/notification_data/general_data/current_time"/></span>
 </xsl:template>
 
 <xsl:template name="addLineBreaks">
