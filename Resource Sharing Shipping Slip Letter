@@ -74,7 +74,6 @@ Use oshkosh font?
 							<xsl:call-template name="libLookup"><xsl:with-param name="input" select="notification_data/item/library_name"/></xsl:call-template>
 						</xsl:with-param>
 					</xsl:call-template></p>
-					<!--div style="font-size:25px; font-weight: bold; font-family:oshkosh;" align="left">yaB neerG-WU</div><br /-->
 					<xsl:if test="contains(notification_data/organization_unit/name, 'Madison')">
 						<div style="font-size:25px; font-weight: bold; font-family:oshkosh;" align="left">nosidaM-WU</div><br/>
 					</xsl:if>
@@ -89,7 +88,6 @@ Use oshkosh font?
 						UW-Madison<br/>
 					</xsl:if>
 					<xsl:call-template name="libLookup">
-						<!--xsl:with-param name="input" select="'_Manitowoc Library'"/-->
 						<xsl:with-param name="input" select="notification_data/item/library_name"/>
 					</xsl:call-template>
 				</p>
@@ -180,7 +178,7 @@ Use oshkosh font?
 				<xsl:if test="starts-with(notification_data/partner_code, '01UWI_MAD')">UW-Madison - <br/>||</xsl:if>
 				<xsl:call-template name="libLookup">
 					<xsl:with-param name="input">
-					    <xsl:variable name="pickup" select="substring-before(substring-after(/notification_data/incoming_request/note, 'Pickup at: '), '||')" />
+					    <xsl:variable name="pickup" select="substring-after(/notification_data/incoming_request/note, 'Pickup at: ')" />
                         <xsl:if test="$pickup != ''"><xsl:value-of select="$pickup" />||</xsl:if>
 						<xsl:call-template name="GetLastSegment">
 							<xsl:with-param name="value" select="notification_data/incoming_request/note" />
@@ -207,20 +205,17 @@ Use oshkosh font?
 			        </xsl:choose>
 			    </xsl:variable>
 				<xsl:choose>
-					<!--<xsl:when test="contains($partner, 'Memorial')">UW-Madison -<br />||Memorial </xsl:when>    -->
-					<xsl:when test="contains($partner, 'Madison') or contains($partner, 'ILL')">
+					<xsl:when test="contains($partner, 'Madison')">
                         UW-Madison -||<br/>
                         <xsl:variable name="note" select="/notification_data/incoming_request/note"/>
                         <xsl:variable name="pickup">
                             <xsl:choose>
                                 <xsl:when test="substring-after($note, 'Pickup at: ') != ''">
-                                    <xsl:variable name="parts" select="tokenize($note, '\|\|')"/>
-                                    <xsl:if test="count($parts) > 1">
-                                      <xsl:value-of select="$parts[last()]"/>
-                                    </xsl:if>
-                                    <xsl:analyze-string select="$note" regex="Pickup at: (.*?) \|\|">
+                                    <xsl:analyze-string select="$note"
+                                                        regex="Pickup at:\s*([^|]*)(\s*\|\|)?"
+                                                        flags="i">
                                       <xsl:matching-substring>
-                                        ||<xsl:value-of select="regex-group(1)"/>
+                                        <xsl:value-of select="normalize-space(regex-group(1))"/>
                                       </xsl:matching-substring>
                                       <xsl:non-matching-substring/>
                                     </xsl:analyze-string>
