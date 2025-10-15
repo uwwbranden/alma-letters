@@ -178,12 +178,15 @@ Use oshkosh font?
 				<xsl:if test="starts-with(notification_data/partner_code, '01UWI_MAD')">UW-Madison - <br/>||</xsl:if>
 				<xsl:call-template name="libLookup">
 					<xsl:with-param name="input">
-					    <xsl:variable name="pickup" select="substring-after(/notification_data/incoming_request/note, 'Pickup at: ')" />
+					    <xsl:variable name="note" select="/notification_data/incoming_request/note"/> 
+					    <xsl:variable name="pickup">
+                          <xsl:call-template name="pickup">
+                            <xsl:with-param name="note" select="$note"/>
+                            <xsl:with-param name="borrowing-library"
+                                            select="/notification_data/incoming_request/borrowing_library"/>
+                          </xsl:call-template>
+                        </xsl:variable>
                         <xsl:if test="$pickup != ''"><xsl:value-of select="$pickup" />||</xsl:if>
-						<xsl:call-template name="GetLastSegment">
-							<xsl:with-param name="value" select="notification_data/incoming_request/note" />
-							<xsl:with-param name="separator" select="'||'" />
-						</xsl:call-template>
 					</xsl:with-param>
 				</xsl:call-template>
 			</xsl:with-param>
@@ -209,27 +212,12 @@ Use oshkosh font?
                         UW-Madison -||<br/>
                         <xsl:variable name="note" select="/notification_data/incoming_request/note"/>
                         <xsl:variable name="pickup">
-                            <xsl:choose>
-                                <xsl:when test="substring-after($note, 'Pickup at: ') != ''">
-                                    <xsl:analyze-string select="$note"
-                                                        regex="Pickup at:\s*([^|]*)(\s*\|\|)?"
-                                                        flags="i">
-                                      <xsl:matching-substring>
-                                        <xsl:value-of select="normalize-space(regex-group(1))"/>
-                                      </xsl:matching-substring>
-                                      <xsl:non-matching-substring/>
-                                    </xsl:analyze-string>
-                                    <xsl:value-of select="/notification_data/incoming_request/borrowing_library" />
-                                </xsl:when>
-                                
-                                <xsl:when test="/notification_data/incoming_request/borrowing_library != ''">
-                                    <xsl:value-of select="/notification_data/incoming_request/borrowing_library" />
-                                </xsl:when>
-                                <xsl:otherwise>
-                                    ____________
-                                </xsl:otherwise>
-                            </xsl:choose>
-                        </xsl:variable> 
+                          <xsl:call-template name="pickup">
+                            <xsl:with-param name="note" select="$note"/>
+                            <xsl:with-param name="borrowing-library"
+                                            select="/notification_data/incoming_request/borrowing_library"/>
+                          </xsl:call-template>
+                        </xsl:variable>
                         <xsl:value-of select="$pickup" />
                     </xsl:when>
 					<xsl:when test="contains($partner, 'Fox Cities Library')">UW-Fox Cities</xsl:when>
@@ -528,6 +516,33 @@ Use oshkosh font?
             <xsl:value-of select="$text"/>
         </xsl:otherwise>
     </xsl:choose>
+</xsl:template>
+
+<xsl:template name="pickup">
+  <xsl:param name="note"/>
+  <xsl:param name="borrowing-library"/>
+
+  <xsl:variable name="from-note">
+    <xsl:if test="matches($note, 'Pickup at:\s*([^|]*)(\s*\|\|)?', 'i')">
+      <xsl:value-of select="
+        normalize-space(
+          replace($note,
+                  '.*Pickup at:\s*([^|]*)(\s*\|\|)?.*',
+                  '$1',
+                  'i')
+        )"/>
+    </xsl:if>
+  </xsl:variable>
+
+  <xsl:choose>
+    <xsl:when test="normalize-space($from-note) != ''">
+      <xsl:value-of select="$from-note"/>
+    </xsl:when>
+    <xsl:when test="normalize-space($borrowing-library) != ''">
+      <xsl:value-of select="normalize-space($borrowing-library)"/>
+    </xsl:when>
+    <xsl:otherwise>____________</xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 	
 </xsl:stylesheet>
